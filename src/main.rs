@@ -32,8 +32,9 @@ impl Component for Model {
         let n_rows = 10 + self.state1;
         let n_hints = 3;
         assert!(n_rows > n_hints);
-        let width = 500;
-        let cell_width = width / n_rows;
+        let target_width = 500;
+        let cell_width = target_width / n_rows;
+        let width = cell_width * n_rows;
 
         let grid_svg = (n_hints..n_rows)
             .map(|xi| cell_width * xi)
@@ -42,10 +43,10 @@ impl Component for Model {
                 html! {
                     <>
                         <line x1={x.to_string()} y1="0"
-                              x2={x.to_string()} y2="500"
+                              x2={x.to_string()} y2={width.to_string()}
                               style="stroke:#DADADA;stroke-width:2" />
                         <line x1="0" y1={x.to_string()}
-                              x2="500" y2={x.to_string()}
+                              x2={width.to_string()} y2={x.to_string()}
                               style="stroke:#DADADA;stroke-width:2" />
                     </>
                 }
@@ -84,7 +85,9 @@ impl Component for Model {
 
         html! {
             <div>
-                <svg width="500" height="500">{grid_svg}{hints_svg}{cells_svg}</svg>
+                <svg width={target_width.to_string()} height={target_width.to_string()}>
+                    {grid_svg}{hints_svg}{cells_svg}
+                </svg>
                 <p></p>
                 <button onclick={link.callback(|_| ModelMsg::PlusOne)}>{"+1"}</button>
                 <p>{self.state1}</p>
