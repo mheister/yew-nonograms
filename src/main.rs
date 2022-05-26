@@ -4,6 +4,8 @@ use board::Board;
 use itertools::iproduct;
 use yew::prelude::*;
 
+use crate::board::FieldCell;
+
 struct NonogramGame {
     state1: i32,
     board: Board,
@@ -11,6 +13,8 @@ struct NonogramGame {
 
 enum ModelMsg {
     PlusOne,
+    Fill(i32, i32),
+    Mark(i32, i32),
 }
 
 impl Component for NonogramGame {
@@ -28,6 +32,14 @@ impl Component for NonogramGame {
         match msg {
             ModelMsg::PlusOne => {
                 self.state1 += 1;
+                true
+            }
+            ModelMsg::Fill(row, col) => {
+                self.board.fill(row as usize, col as usize);
+                true
+            }
+            ModelMsg::Mark(row, col) => {
+                self.board.mark(row as usize, col as usize);
                 true
             }
         }
@@ -67,7 +79,7 @@ impl Component for NonogramGame {
                 .map(|(xi, yi)| (xi, n_hints + yi, self.board.row_hint(yi, xi).number));
             col_hints
                 .chain(row_hints)
-                .filter(|(_,_,val)| *val != 0u8)
+                .filter(|(_, _, val)| *val != 0u8)
                 .map(|(xi, yi, val)| {
                     (
                         cell_width_px * xi + cell_width_px / 2 - 4,
@@ -84,7 +96,7 @@ impl Component for NonogramGame {
                 .collect::<Html>()
         };
 
-        let cell_svg = |xi: usize, yi: usize| {
+        let filled_cell_svg = |xi: usize, yi: usize| {
             let x = cell_width_px * xi + 1;
             let y = cell_width_px * yi + 1;
             let rect_width = cell_width_px - 2;
@@ -95,15 +107,42 @@ impl Component for NonogramGame {
                  style="fill:#8D6D6D;stroke-width:1;stroke:#6E4E4E" />
             }
         };
-        let cells_svg = iproduct!(0..n_field_rows, 0..n_field_rows)
-            .map(|(xi, yi)| (xi + n_hints, yi + n_hints, self.board.solution()[yi][xi]))
-            .filter(|(_, _, cell)| cell.eq(&board::FieldCell::Filled))
-            .map(|(xi, yi, _)| cell_svg(xi, yi))
-            .collect::<Html>();
+        let marked_cell_svg = |xi: usize, yi: usize| {
+            let x = cell_width_px * xi + cell_width_px / 2 - 4;
+            let y = cell_width_px * yi + cell_width_px / 2 + 6;
+            let (x, y) = (x.to_string(), y.to_string());
+            html! {
+                <text {x} {y} fill="black">{"X"}</text>
+            }
+        };
+        let cells_svg: Html = iproduct!(0..n_field_rows, 0..n_field_rows)
+            .map(|(xi, yi)| (xi + n_hints, yi + n_hints, self.board.field(yi, xi)))
+            .map(|(xi, yi, cell)| match cell {
+                FieldCell::Empty => html! {},
+                FieldCell::Filled => filled_cell_svg(xi, yi),
+                FieldCell::Marked => marked_cell_svg(xi, yi),
+            })
+            .collect();
+
+        let onclick = ctx.link().batch_callback(move |evt: MouseEvent| {
+            let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
+            let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
+            if evt.button() == 0 {
+                Some(Self::Message::Fill(row, col))
+            } else {
+                None
+            }
+        });
+        let oncontextmenu = ctx.link().callback(move |evt: MouseEvent| {
+            evt.prevent_default();
+            let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
+            let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
+            Self::Message::Mark(row, col)
+        });
 
         html! {
             <div>
-                <svg width={target_width_px.to_string()} height={target_width_px.to_string()}>
+                <svg width={target_width_px.to_string()} height={target_width_px.to_string()} {onclick} {oncontextmenu}>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
                 <p></p>
@@ -112,6 +151,14 @@ impl Component for NonogramGame {
             </div>
         }
     }
+
+    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+        true
+    }
+
+    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {}
+
+    fn destroy(&mut self, ctx: &Context<Self>) {}
 }
 
 fn main() {

@@ -171,8 +171,8 @@ impl Board {
         self.row_hints[row][pos]
     }
 
-    pub fn solution(&self) -> &Grid<FieldCell> {
-        &self.solution
+    pub fn field(&self, row: usize, col: usize) -> FieldCell {
+        self.field[row][col]
     }
 
     pub fn fill(&mut self, row: usize, col: usize) {
