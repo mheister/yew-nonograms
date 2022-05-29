@@ -7,12 +7,10 @@ use yew::prelude::*;
 use crate::board::FieldCell;
 
 struct NonogramGame {
-    state1: i32,
     board: Board,
 }
 
 enum ModelMsg {
-    PlusOne,
     Fill(i32, i32),
     Mark(i32, i32),
 }
@@ -23,17 +21,12 @@ impl Component for NonogramGame {
 
     fn create(_ctx: &Context<Self>) -> Self {
         Self {
-            state1: 0,
             board: Board::new(),
         }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            ModelMsg::PlusOne => {
-                self.state1 += 1;
-                true
-            }
             ModelMsg::Fill(row, col) => {
                 self.board.fill(row as usize, col as usize);
                 true
@@ -63,10 +56,10 @@ impl Component for NonogramGame {
                     <>
                         <line x1={x.to_string()} y1="0"
                               x2={x.to_string()} y2={width_px.to_string()}
-                              style="stroke:#DADADA;stroke-width:2" />
+                              class={"game-grid-line"} />
                         <line x1="0" y1={x.to_string()}
                               x2={width_px.to_string()} y2={x.to_string()}
-                              style="stroke:#DADADA;stroke-width:2" />
+                              class={"game-grid-line"} />
                     </>
                 }
             })
@@ -90,7 +83,7 @@ impl Component for NonogramGame {
                 .map(|(x, y, val)| (x.to_string(), y.to_string(), val.to_string()))
                 .map(|(x, y, val)| {
                     html! {
-                        <text {x} {y} fill="blue">{val}</text>
+                        <text {x} {y}>{val}</text>
                     }
                 })
                 .collect::<Html>()
@@ -124,7 +117,7 @@ impl Component for NonogramGame {
             })
             .collect();
 
-        let onclick = ctx.link().batch_callback(move |evt: MouseEvent| {
+        let onclick = link.batch_callback(move |evt: MouseEvent| {
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
             let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
             if evt.button() == 0 {
@@ -133,7 +126,7 @@ impl Component for NonogramGame {
                 None
             }
         });
-        let oncontextmenu = ctx.link().callback(move |evt: MouseEvent| {
+        let oncontextmenu = link.callback(move |evt: MouseEvent| {
             evt.prevent_default();
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
             let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
@@ -141,24 +134,28 @@ impl Component for NonogramGame {
         });
 
         html! {
-            <div>
-                <svg width={target_width_px.to_string()} height={target_width_px.to_string()} {onclick} {oncontextmenu}>
+            <>
+            <h1>{"Nonogram Game"}</h1>
+            <div class={"content-box"}>
+                <svg id={"game-board"}
+                     width={target_width_px.to_string()}
+                     height={target_width_px.to_string()}
+                     {onclick}
+                     {oncontextmenu}>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
-                <p></p>
-                <button onclick={link.callback(|_| ModelMsg::PlusOne)}>{"+1"}</button>
-                <p>{self.state1}</p>
             </div>
+            </>
         }
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
         true
     }
 
-    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {}
+    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {}
 
-    fn destroy(&mut self, ctx: &Context<Self>) {}
+    fn destroy(&mut self, _ctx: &Context<Self>) {}
 }
 
 fn main() {
