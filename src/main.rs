@@ -89,30 +89,36 @@ impl Component for NonogramGame {
                 .collect::<Html>()
         };
 
-        let filled_cell_svg = |xi: usize, yi: usize| {
-            let x = cell_width_px * xi + 1;
-            let y = cell_width_px * yi + 1;
+        let filled_cell_svg = |xi: usize, yi: usize, correct: bool| {
+            let x = cell_width_px * (xi + n_hints) + 1;
+            let y = cell_width_px * (yi + n_hints) + 1;
             let rect_width = cell_width_px - 2;
+            let (x, y, width) = (x.to_string(), y.to_string(), rect_width.to_string());
+            let height = width.clone();
+            let class = if correct {
+                "game-cell-filled".to_owned()
+            } else {
+                "game-cell-filled-incorrect".to_owned()
+            };
             html! {
-                <rect x={x.to_string()} y={y.to_string()}
-                 width={rect_width.to_string()}
-                 height={rect_width.to_string()}
-                 style="fill:#8D6D6D;stroke-width:1;stroke:#6E4E4E" />
+                <rect {x} {y} {width} {height} {class}/>
             }
         };
         let marked_cell_svg = |xi: usize, yi: usize| {
-            let x = cell_width_px * xi + cell_width_px / 2 - 4;
-            let y = cell_width_px * yi + cell_width_px / 2 + 6;
+            let x = cell_width_px * (xi + n_hints) + cell_width_px / 2 - 4;
+            let y = cell_width_px * (yi + n_hints) + cell_width_px / 2 + 6;
             let (x, y) = (x.to_string(), y.to_string());
             html! {
                 <text {x} {y} fill="black">{"X"}</text>
             }
         };
         let cells_svg: Html = iproduct!(0..n_field_rows, 0..n_field_rows)
-            .map(|(xi, yi)| (xi + n_hints, yi + n_hints, self.board.field(yi, xi)))
-            .map(|(xi, yi, cell)| match cell {
+            .map(|(xi, yi)| match self.board.field(yi, xi) {
                 FieldCell::Empty => html! {},
-                FieldCell::Filled => filled_cell_svg(xi, yi),
+                FieldCell::Filled => {
+                    let correct = self.board.solution(yi, xi) == FieldCell::Filled;
+                    filled_cell_svg(xi, yi, correct)
+                }
                 FieldCell::Marked => marked_cell_svg(xi, yi),
             })
             .collect();

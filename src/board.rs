@@ -175,11 +175,19 @@ impl Board {
         self.field[row][col]
     }
 
+    pub fn solution(&self, row: usize, col: usize) -> FieldCell {
+        self.solution[row][col]
+    }
+
     pub fn fill(&mut self, row: usize, col: usize) {
         self.field[row][col] = FieldCell::Filled;
     }
 
     pub fn mark(&mut self, row: usize, col: usize) {
-        self.field[row][col] = FieldCell::Marked;
+        let cell = &mut self.field[row][col];
+        *cell = match cell {
+            FieldCell::Marked => FieldCell::Empty,
+            _ => FieldCell::Marked
+        }
     }
 }
