@@ -1,7 +1,9 @@
+use std::{rc::Rc, cell::RefCell};
+
 use itertools::Itertools;
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum FieldCell {
     Empty = 0,
     Filled = 1,
@@ -28,10 +30,11 @@ pub struct Grid<T> {
 
 pub struct Board {
     width: usize,
-    field: Grid<FieldCell>,
+    field: Rc<RefCell<Grid<FieldCell>>>,
     solution: Grid<FieldCell>,
     col_hints: Grid<HintCell>,
     row_hints: Grid<HintCell>,
+    preview_generation: u32,
 }
 
 impl<T> std::ops::Index<usize> for Grid<T> {
@@ -60,6 +63,13 @@ impl<T: Default + Clone + Copy> Grid<T> {
         let mut cells: Vec<T> = cells.into();
         cells.resize(width * width, T::default());
         Self { width, cells }
+    }
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
+    #[allow(unused)]
+    pub fn get_height(&self) -> usize {
+        self.cells.len() / self.width
     }
 }
 
@@ -146,10 +156,11 @@ impl Board {
         let hint_len = (width + 1) / 2;
         let mut result = Board {
             width,
-            field: Grid::new(width, width),
+            field: Rc::new(RefCell::new(Grid::new(width, width))),
             solution: Grid::from_flat(width, &Vec::<FieldCell>::from_iter(fields)),
             col_hints: Grid::new(width, hint_len),
             row_hints: Grid::new(hint_len, height),
+            preview_generation: 0
         };
         result.generate_hints();
         result
@@ -172,22 +183,39 @@ impl Board {
     }
 
     pub fn field(&self, row: usize, col: usize) -> FieldCell {
-        self.field[row][col]
+        self.field.borrow_mut()[row][col]
     }
 
     pub fn solution(&self, row: usize, col: usize) -> FieldCell {
         self.solution[row][col]
     }
 
+    pub fn field_ref(&self) -> Rc<RefCell<Grid<FieldCell>>> {
+        self.field.clone()
+    }
+
     pub fn fill(&mut self, row: usize, col: usize) {
-        self.field[row][col] = FieldCell::Filled;
+        let cell = &mut self.field.borrow_mut()[row][col];
+        if *cell != FieldCell::Filled {
+            self.preview_generation += 1;
+        }
+        *cell = FieldCell::Filled;
     }
 
     pub fn mark(&mut self, row: usize, col: usize) {
-        let cell = &mut self.field[row][col];
+        let cell = &mut self.field.borrow_mut()[row][col];
+        if *cell == FieldCell::Filled {
+            self.preview_generation += 1;
+        }
         *cell = match cell {
             FieldCell::Marked => FieldCell::Empty,
-            _ => FieldCell::Marked
+            _ => FieldCell::Marked,
         }
+    }
+
+    /// Returns the 'preview generation' of the playing field, which is incremented every
+    /// time the set of filled cells changes
+    pub fn preview_generation(&self) -> u32 {
+        self.preview_generation
     }
 }

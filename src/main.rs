@@ -1,7 +1,9 @@
 mod board;
+mod preview;
 
 use board::Board;
 use itertools::iproduct;
+use preview::NonogramPreview;
 use yew::prelude::*;
 
 use crate::board::FieldCell;
@@ -47,6 +49,8 @@ impl Component for NonogramGame {
         let target_width_px = 500;
         let cell_width_px = target_width_px / n_rows;
         let width_px = cell_width_px * n_rows;
+        let preview_width_px = cell_width_px * n_hints * 8 / 10;
+        let preview_margin_px = cell_width_px * n_hints * 1 / 10;
 
         let grid_svg = (n_hints..n_rows)
             .map(|xi| cell_width_px * xi)
@@ -126,17 +130,21 @@ impl Component for NonogramGame {
         let onclick = link.batch_callback(move |evt: MouseEvent| {
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
             let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
-            if evt.button() == 0 {
+            if evt.button() == 0 && row >= 0 && col >= 0 {
                 Some(Self::Message::Fill(row, col))
             } else {
                 None
             }
         });
-        let oncontextmenu = link.callback(move |evt: MouseEvent| {
+        let oncontextmenu = link.batch_callback(move |evt: MouseEvent| {
             evt.prevent_default();
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
             let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
-            Self::Message::Mark(row, col)
+            if row >= 0 && col >= 0 {
+                Some(Self::Message::Mark(row, col))
+            } else {
+                None
+            }
         });
 
         html! {
@@ -148,6 +156,10 @@ impl Component for NonogramGame {
                      height={target_width_px.to_string()}
                      {onclick}
                      {oncontextmenu}>
+                    <NonogramPreview field={self.board.field_ref()}
+                                     pass={self.board.preview_generation()}
+                                     width_px={preview_width_px as u32}
+                                     margin_px={preview_margin_px as u32}/>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
             </div>
@@ -158,10 +170,6 @@ impl Component for NonogramGame {
     fn changed(&mut self, _ctx: &Context<Self>) -> bool {
         true
     }
-
-    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {}
-
-    fn destroy(&mut self, _ctx: &Context<Self>) {}
 }
 
 fn main() {
