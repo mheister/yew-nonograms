@@ -1,5 +1,5 @@
+use crate::grid::Grid;
 use std::{rc::Rc, cell::RefCell};
-
 use itertools::Itertools;
 
 #[repr(u8)]
@@ -16,16 +16,16 @@ impl Default for FieldCell {
     }
 }
 
+impl Into<u8> for FieldCell {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct HintCell {
     pub number: u8,    // 0 represents empty field
     pub crossed: bool, // player can mark hints
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Grid<T> {
-    width: usize,
-    cells: Vec<T>,
 }
 
 pub struct Board {
@@ -35,42 +35,6 @@ pub struct Board {
     col_hints: Grid<HintCell>,
     row_hints: Grid<HintCell>,
     preview_generation: u32,
-}
-
-impl<T> std::ops::Index<usize> for Grid<T> {
-    type Output = [T];
-    fn index(&self, index: usize) -> &Self::Output {
-        let rowstart = self.width as usize * index;
-        &self.cells[rowstart..rowstart + self.width as usize]
-    }
-}
-
-impl<T> std::ops::IndexMut<usize> for Grid<T> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        let rowstart = self.width as usize * index;
-        &mut self.cells[rowstart..rowstart + self.width as usize]
-    }
-}
-
-impl<T: Default + Clone + Copy> Grid<T> {
-    pub fn new(width: usize, height: usize) -> Self {
-        Self {
-            width,
-            cells: [T::default()].repeat(width * height),
-        }
-    }
-    pub fn from_flat(width: usize, cells: &[T]) -> Self {
-        let mut cells: Vec<T> = cells.into();
-        cells.resize(width * width, T::default());
-        Self { width, cells }
-    }
-    pub fn get_width(&self) -> usize {
-        self.width
-    }
-    #[allow(unused)]
-    pub fn get_height(&self) -> usize {
-        self.cells.len() / self.width
-    }
 }
 
 impl Board {
@@ -171,7 +135,7 @@ impl Board {
     }
 
     pub fn hint_len(&self) -> usize {
-        (self.solution.width + 1) / 2
+        (self.solution.width() + 1) / 2
     }
 
     pub fn col_hint(&self, col: usize, pos: usize) -> HintCell {
