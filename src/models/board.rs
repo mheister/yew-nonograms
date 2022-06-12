@@ -1,4 +1,4 @@
-use crate::grid::Grid;
+use super::grid::Grid;
 use std::{rc::Rc, cell::RefCell};
 use itertools::Itertools;
 

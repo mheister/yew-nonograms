@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use itertools::iproduct;
 use yew::prelude::*;
 
-use crate::grid::Grid;
-use crate::board::FieldCell;
+use crate::models::grid::Grid;
+use crate::models::board::FieldCell;
 
 pub struct NonogramPreview;
 
