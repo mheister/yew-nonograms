@@ -1,8 +1,8 @@
-use crate::models::board::FieldCell;
 use crate::components::preview::NonogramPreview;
+use crate::models::board::FieldCell;
 
-use yew::prelude::*;
 use itertools::iproduct;
+use yew::prelude::*;
 
 pub struct Board {
     board: crate::models::board::Board,
@@ -13,9 +13,22 @@ pub enum BoardMsg {
     Mark(i32, i32),
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum BoardMode {
+    Solve,
+    Set,
+}
+
+impl yew::html::ImplicitClone for BoardMode {}
+
+#[derive(PartialEq, Properties)]
+pub struct BoardProps {
+    pub mode: BoardMode,
+}
+
 impl Component for Board {
     type Message = BoardMsg;
-    type Properties = ();
+    type Properties = BoardProps;
 
     fn create(_ctx: &Context<Self>) -> Self {
         Self {
