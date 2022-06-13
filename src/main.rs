@@ -50,7 +50,10 @@ impl Component for NonogramGame {
             <h1>{"Nonogram Game"}</h1>
             <div class={"content-box"}>
                 <BoardComponent mode={self.mode}/>
-                <p><input type={"checkbox"} id={"modeselector"} onchange={mode_selector_onchange}/>
+                <p><input type={"checkbox"}
+                          id={"modeselector"}
+                          onchange={mode_selector_onchange}
+                          checked={self.mode == BoardMode::Set}/>
                 <label for={"modeselector"}>{"Set Puzzle"}</label></p>
             </div>
             </>
