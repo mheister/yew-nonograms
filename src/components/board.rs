@@ -9,8 +9,8 @@ pub struct Board {
 }
 
 pub enum BoardMsg {
-    Fill(i32, i32),
-    Mark(i32, i32),
+    RightClick(i32, i32),
+    LeftClick(i32, i32),
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -36,16 +36,32 @@ impl Component for Board {
         }
     }
 
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        match msg {
-            BoardMsg::Fill(row, col) => {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        match (ctx.props().mode, msg) {
+            (BoardMode::Solve, BoardMsg::RightClick(row, col)) => {
                 self.board.fill(row as usize, col as usize);
                 true
             }
-            BoardMsg::Mark(row, col) => {
+            (BoardMode::Solve, BoardMsg::LeftClick(row, col)) => {
                 self.board.mark(row as usize, col as usize);
                 true
             }
+            (BoardMode::Set, BoardMsg::RightClick(row, col)) => {
+                if self.board.solution(row as usize, col as usize) != FieldCell::Filled {
+                    self.board.set(row as usize, col as usize, true);
+                    true
+                } else {
+                    false
+                }
+            }
+            (BoardMode::Set, BoardMsg::LeftClick(row, col)) => {
+                if self.board.solution(row as usize, col as usize) == FieldCell::Filled {
+                    self.board.set(row as usize, col as usize, false);
+                    true
+                } else {
+                    false
+                }
+            },
         }
     }
 
@@ -68,7 +84,7 @@ impl Component for Board {
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
             let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
             if evt.button() == 0 && row >= 0 && col >= 0 {
-                Some(Self::Message::Fill(row, col))
+                Some(Self::Message::RightClick(row, col))
             } else {
                 None
             }
@@ -78,7 +94,7 @@ impl Component for Board {
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
             let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
             if row >= 0 && col >= 0 {
-                Some(Self::Message::Mark(row, col))
+                Some(Self::Message::LeftClick(row, col))
             } else {
                 None
             }
@@ -100,7 +116,7 @@ impl Component for Board {
                                      margin_px={preview_margin_px as u32}/>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
-                <p>{self.board.field_ref().serialize_base64()}</p>
+                <p>{self.board.solution_ref().serialize_base64()}</p>
             </>
         }
     }

@@ -33,7 +33,6 @@ pub struct Board {
     solution: Grid<FieldCell>,
     col_hints: Grid<HintCell>,
     row_hints: Grid<HintCell>,
-    preview_generation: u32,
 }
 
 impl Board {
@@ -123,7 +122,6 @@ impl Board {
             solution: Grid::from_flat(width, &Vec::<FieldCell>::from_iter(fields)),
             col_hints: Grid::new(width, hint_len),
             row_hints: Grid::new(hint_len, height),
-            preview_generation: 0
         };
         result.generate_hints();
         result
@@ -162,21 +160,23 @@ impl Board {
     }
 
     pub fn fill(&mut self, row: usize, col: usize) {
-        let cell = &mut self.field[row][col];
-        if *cell != FieldCell::Filled {
-            self.preview_generation += 1;
-        }
-        *cell = FieldCell::Filled;
+        self.field[row][col] = FieldCell::Filled;
     }
 
     pub fn mark(&mut self, row: usize, col: usize) {
-        let cell = &mut self.field[row][col];
-        if *cell == FieldCell::Filled {
-            self.preview_generation += 1;
-        }
-        *cell = match cell {
+        self.field[row][col] = match &mut self.field[row][col] {
             FieldCell::Marked => FieldCell::Empty,
             _ => FieldCell::Marked,
         }
+    }
+
+    /// Set a cell in the solution
+    pub fn set(&mut self, row: usize, col: usize, filled: bool) {
+        if filled {
+            self.solution[row][col] = FieldCell::Filled;
+        } else {
+            self.solution[row][col] = FieldCell::Empty;
+        }
+        self.generate_hints();
     }
 }
