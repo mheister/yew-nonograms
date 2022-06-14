@@ -58,11 +58,11 @@ impl Component for Board {
         let target_width_px = 500;
         let cell_width_px = target_width_px / n_rows;
         let preview_width_px = cell_width_px * n_hints * 8 / 10;
-        let preview_margin_px = cell_width_px * n_hints * 1 / 10;
+        let preview_margin_px = cell_width_px * n_hints / 10;
 
         let grid_svg = grid_svg(n_hints, n_rows, cell_width_px);
         let hints_svg = hints_svg(&self.board, cell_width_px);
-        let cells_svg = cells_svg(&self.board, cell_width_px);
+        let cells_svg = cells_svg(&self.board, ctx.props().mode, cell_width_px);
 
         let onclick = link.batch_callback(move |evt: MouseEvent| {
             let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
@@ -84,20 +84,23 @@ impl Component for Board {
             }
         });
 
+        let preview_field = match ctx.props().mode {
+            BoardMode::Solve => self.board.field_ref(),
+            BoardMode::Set => self.board.solution_ref(),
+        };
+
         html! {
             <>
                 <svg id={"game-board"}
                      width={target_width_px.to_string()}
                      height={target_width_px.to_string()}
-                     {onclick}
-                     {oncontextmenu}>
-                    <NonogramPreview field={self.board.field_ref()}
-                                     pass={self.board.preview_generation()}
+                     {onclick} {oncontextmenu}>
+                    <NonogramPreview field={preview_field.clone()}
                                      width_px={preview_width_px as u32}
                                      margin_px={preview_margin_px as u32}/>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
-                <p>{self.board.field_ref().borrow().serialize_base64()}</p>
+                <p>{self.board.field_ref().serialize_base64()}</p>
             </>
         }
     }
@@ -107,7 +110,7 @@ impl Component for Board {
     }
 }
 
-fn cells_svg(board: &BoardModel, cell_width_px: usize) -> Html {
+fn cells_svg(board: &BoardModel, mode: BoardMode, cell_width_px: usize) -> Html {
     let n_hints = board.hint_len();
     let n_field_rows = board.width();
     let filled_cell_svg = |xi: usize, yi: usize, correct: bool| {
@@ -133,46 +136,51 @@ fn cells_svg(board: &BoardModel, cell_width_px: usize) -> Html {
             <text {x} {y} fill="black">{"X"}</text>
         }
     };
-    let cells_svg: Html = iproduct!(0..n_field_rows, 0..n_field_rows)
-        .map(|(xi, yi)| match board.field(yi, xi) {
-            FieldCell::Empty => html! {},
-            FieldCell::Filled => {
-                let correct = board.solution(yi, xi) == FieldCell::Filled;
-                filled_cell_svg(xi, yi, correct)
-            }
-            FieldCell::Marked => marked_cell_svg(xi, yi),
-        })
-        .collect();
-    cells_svg
+    match mode {
+        BoardMode::Solve => iproduct!(0..n_field_rows, 0..n_field_rows)
+            .map(|(xi, yi)| match board.field(yi, xi) {
+                FieldCell::Empty => html! {},
+                FieldCell::Filled => {
+                    let correct = board.solution(yi, xi) == FieldCell::Filled;
+                    filled_cell_svg(xi, yi, correct)
+                }
+                FieldCell::Marked => marked_cell_svg(xi, yi),
+            })
+            .collect(),
+        BoardMode::Set => iproduct!(0..n_field_rows, 0..n_field_rows)
+            .map(|(xi, yi)| match board.solution(yi, xi) {
+                FieldCell::Empty => html! {},
+                FieldCell::Filled => filled_cell_svg(xi, yi, true),
+                FieldCell::Marked => marked_cell_svg(xi, yi),
+            })
+            .collect(),
+    }
 }
 
 fn hints_svg(board: &BoardModel, cell_width_px: usize) -> Html {
     let n_hints = board.hint_len();
     let n_field_rows = board.width();
-    let hints_svg = {
-        let col_hints = iproduct!(0..n_field_rows, 0..n_hints)
-            .map(|(xi, yi)| (n_hints + xi, yi, board.col_hint(xi, yi).number));
-        let row_hints = iproduct!(0..n_hints, 0..n_field_rows)
-            .map(|(xi, yi)| (xi, n_hints + yi, board.row_hint(yi, xi).number));
-        col_hints
-            .chain(row_hints)
-            .filter(|(_, _, val)| *val != 0u8)
-            .map(|(xi, yi, val)| {
-                (
-                    cell_width_px * xi + cell_width_px / 2 - 4,
-                    cell_width_px * yi + cell_width_px / 2 + 6,
-                    val,
-                )
-            })
-            .map(|(x, y, val)| (x.to_string(), y.to_string(), val.to_string()))
-            .map(|(x, y, val)| {
-                html! {
-                    <text {x} {y}>{val}</text>
-                }
-            })
-            .collect::<Html>()
-    };
-    hints_svg
+    let col_hints = iproduct!(0..n_field_rows, 0..n_hints)
+        .map(|(xi, yi)| (n_hints + xi, yi, board.col_hint(xi, yi).number));
+    let row_hints = iproduct!(0..n_hints, 0..n_field_rows)
+        .map(|(xi, yi)| (xi, n_hints + yi, board.row_hint(yi, xi).number));
+    col_hints
+        .chain(row_hints)
+        .filter(|(_, _, val)| *val != 0u8)
+        .map(|(xi, yi, val)| {
+            (
+                cell_width_px * xi + cell_width_px / 2 - 4,
+                cell_width_px * yi + cell_width_px / 2 + 6,
+                val,
+            )
+        })
+        .map(|(x, y, val)| (x.to_string(), y.to_string(), val.to_string()))
+        .map(|(x, y, val)| {
+            html! {
+                <text {x} {y}>{val}</text>
+            }
+        })
+        .collect::<Html>()
 }
 
 fn grid_svg(

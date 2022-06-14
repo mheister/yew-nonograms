@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use itertools::iproduct;
 use yew::prelude::*;
 
@@ -10,8 +8,7 @@ pub struct NonogramPreview;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct NonogramPreviewProps {
-    pub field: Rc<RefCell<Grid<FieldCell>>>,
-    pub pass: u32,
+    pub field: Grid<FieldCell>,
     pub width_px: u32,
     pub margin_px: u32,
 }
@@ -26,7 +23,7 @@ impl Component for NonogramPreview {
     }
 
     fn view(&self, ctx: &yew::Context<Self>) -> Html {
-        let grid = ctx.props().field.borrow();
+        let grid = &ctx.props().field;
         let n_field_rows = grid.width();
         let cell_width_px = ctx.props().width_px as usize / n_field_rows;
         let margin = ctx.props().margin_px as usize;
