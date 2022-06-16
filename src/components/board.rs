@@ -24,6 +24,7 @@ impl yew::html::ImplicitClone for BoardMode {}
 #[derive(PartialEq, Properties)]
 pub struct BoardProps {
     pub mode: BoardMode,
+    pub puzzle: String,
 }
 
 impl Component for Board {
