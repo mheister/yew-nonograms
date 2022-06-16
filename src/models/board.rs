@@ -21,6 +21,16 @@ impl From<FieldCell> for u8 {
     }
 }
 
+impl From<u8> for FieldCell {
+    fn from(cell: u8) -> Self {
+        match cell {
+            1 => FieldCell::Filled,
+            2 => FieldCell::Marked,
+            _ => FieldCell::Empty,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct HintCell {
     pub number: u8,    // 0 represents empty field
