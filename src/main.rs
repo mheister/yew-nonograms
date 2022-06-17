@@ -1,22 +1,12 @@
+mod routes;
 mod components;
 mod models;
 
+use crate::routes::Route;
 use crate::components::board::{Board as BoardComponent, BoardMode};
 
 use yew::prelude::*;
 use yew_router::prelude::*;
-
-#[derive(Clone, PartialEq, Routable)]
-enum Route {
-    #[at("/")]
-    Home,
-    #[at("/solve/:puzzle")]
-    Solve { puzzle: String },
-    #[at("/set/:puzzle")]
-    Set { puzzle: String },
-    #[at("/set")]
-    SetNew,
-}
 
 fn switch(route: &Route) -> Html {
     let (mode, puzzle) = match route {

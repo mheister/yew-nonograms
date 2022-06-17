@@ -1,8 +1,10 @@
 use crate::components::preview::NonogramPreview;
 use crate::models::board::{Board as BoardModel, FieldCell};
+use crate::routes::Route;
 
 use itertools::iproduct;
 use yew::prelude::*;
+use yew_router::prelude::Link;
 
 pub struct Board {
     board: BoardModel,
@@ -109,6 +111,27 @@ impl Component for Board {
             BoardMode::Set => self.board.solution_ref(),
         };
 
+        let links_to_puzzle = match ctx.props().mode {
+            BoardMode::Solve => html!(),
+            BoardMode::Set => {
+                let serialized_solution = self.board.solution_ref().serialize_base64();
+                html! {
+                    <>
+                    <p>
+                        <Link<Route> to={Route::Set{puzzle: serialized_solution.clone()}}>
+                            {"Link (Continue Setting)"}
+                        </Link<Route>>
+                    </p>
+                    <p>
+                        <Link<Route> to={Route::Solve{puzzle: serialized_solution}}>
+                            {"Link (Solve)"}
+                        </Link<Route>>
+                    </p>
+                    </>
+                }
+            }
+        };
+
         html! {
             <>
                 <svg id={"game-board"}
@@ -120,7 +143,7 @@ impl Component for Board {
                                      margin_px={preview_margin_px as u32}/>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
-                <p>{self.board.solution_ref().serialize_base64()}</p>
+                {links_to_puzzle}
             </>
         }
     }
