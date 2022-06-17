@@ -31,9 +31,12 @@ impl Component for Board {
     type Message = BoardMsg;
     type Properties = BoardProps;
 
-    fn create(_ctx: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
-            board: BoardModel::new(),
+            board: match &ctx.props().puzzle.as_ref() {
+                &"" => BoardModel::new(),
+                puzzle => BoardModel::from_serialized_solution(puzzle),
+            },
         }
     }
 
@@ -62,7 +65,7 @@ impl Component for Board {
                 } else {
                     false
                 }
-            },
+            }
         }
     }
 

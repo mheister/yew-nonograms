@@ -137,6 +137,22 @@ impl Board {
         result
     }
 
+    pub fn from_serialized_solution(serialized_solution: &str) -> Self {
+        let solution = Grid::<FieldCell>::from_base64(serialized_solution).unwrap_or(Grid::new(10, 10));
+        let (width, height) = (solution.width(), solution.height());
+        let col_hint_len = (width + 1) / 2;
+        let row_hint_len = (height + 1) / 2;
+        let mut result = Board {
+            width: solution.width(),
+            field: Grid::new(width, height),
+            solution,
+            col_hints: Grid::new(width, col_hint_len),
+            row_hints: Grid::new(row_hint_len, height),
+        };
+        result.generate_hints();
+        result
+    }
+
     pub fn width(&self) -> usize {
         self.width
     }
