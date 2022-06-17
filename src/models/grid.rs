@@ -127,16 +127,6 @@ impl<T: Default + Clone + Copy + Into<u8> + From<u8>> Grid<T> {
                         grid[row_idx][col_idx] = T::from(cell);
                     });
                 });
-            // content
-            //     .iter()
-            //     .chunks(width)
-            //     .into_iter()
-            //     .enumerate()
-            //     .for_each(|(row_idx, row)| {
-            //         row.enumerate().for_each(|(col_idx, &cell)| {
-            //             grid[row_idx][col_idx] = T::from(cell);
-            //         });
-            //     });
         }
         Ok(grid)
     }
