@@ -1,6 +1,10 @@
-use crate::components::preview::NonogramPreview;
+mod dragselection;
+mod preview;
+
 use crate::models::board::{Board as BoardModel, FieldCell};
 use crate::routes::Route;
+use dragselection::DragSelection;
+use preview::NonogramPreview;
 
 use itertools::iproduct;
 use yew::prelude::*;
@@ -8,9 +12,11 @@ use yew_router::prelude::Link;
 
 pub struct Board {
     board: BoardModel,
+    drag_start: Option<(i32, i32)>,
 }
 
 pub enum BoardMsg {
+    DragStart(i32, i32),
     RightClick(i32, i32),
     LeftClick(i32, i32),
 }
@@ -39,34 +45,57 @@ impl Component for Board {
                 &"" => BoardModel::new(),
                 puzzle => BoardModel::from_serialized_solution(puzzle),
             },
+            drag_start: None,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match (ctx.props().mode, msg) {
             (BoardMode::Solve, BoardMsg::RightClick(row, col)) => {
-                self.board.fill(row as usize, col as usize);
+                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
+                    .map(|(row, col)| (row as usize, col as usize))
+                    .for_each(|(row, col)| {
+                        self.board.mark(row, col);
+                    });
                 true
             }
             (BoardMode::Solve, BoardMsg::LeftClick(row, col)) => {
-                self.board.mark(row as usize, col as usize);
+                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
+                    .map(|(row, col)| (row as usize, col as usize))
+                    .for_each(|(row, col)| {
+                        self.board.fill(row, col);
+                    });
                 true
             }
             (BoardMode::Set, BoardMsg::RightClick(row, col)) => {
-                if self.board.solution(row as usize, col as usize) != FieldCell::Filled {
-                    self.board.set(row as usize, col as usize, true);
-                    true
-                } else {
-                    false
-                }
+                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
+                    .map(|(row, col)| (row as usize, col as usize))
+                    .filter(|&(row, col)| {
+                        if self.board.solution(row, col) == FieldCell::Filled {
+                            self.board.set(row, col, false);
+                            return true;
+                        }
+                        false
+                    })
+                    .count()
+                    > 0
             }
             (BoardMode::Set, BoardMsg::LeftClick(row, col)) => {
-                if self.board.solution(row as usize, col as usize) == FieldCell::Filled {
-                    self.board.set(row as usize, col as usize, false);
-                    true
-                } else {
-                    false
-                }
+                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
+                    .map(|(row, col)| (row as usize, col as usize))
+                    .filter(|&(row, col)| {
+                        if self.board.solution(row, col) != FieldCell::Filled {
+                            self.board.set(row, col, true);
+                            return true;
+                        }
+                        false
+                    })
+                    .count()
+                    > 0
+            }
+            (_, BoardMsg::DragStart(row, col)) => {
+                self.drag_start = Some((row, col));
+                false
             }
         }
     }
@@ -86,24 +115,37 @@ impl Component for Board {
         let hints_svg = hints_svg(&self.board, cell_width_px);
         let cells_svg = cells_svg(&self.board, ctx.props().mode, cell_width_px);
 
-        let onclick = link.batch_callback(move |evt: MouseEvent| {
-            let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
-            let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
-            if evt.button() == 0 && row >= 0 && col >= 0 {
-                Some(Self::Message::RightClick(row, col))
+        let offset_to_coord = move |(offset_x, offset_y): (i32, i32)| {
+            let row = (offset_y / cell_width_px as i32) - n_hints as i32;
+            let col = (offset_x / cell_width_px as i32) - n_hints as i32;
+            if row >= 0
+                && col >= 0
+                && row as usize <= n_field_rows - 1
+                && col as usize <= n_field_rows - 1
+            {
+                Some((row, col))
             } else {
                 None
             }
+        };
+
+        let onmousedown = link.batch_callback(move |evt: MouseEvent| {
+            offset_to_coord((evt.offset_x(), evt.offset_y()))
+                .and_then(|(row, col)| Some(Self::Message::DragStart(row, col)))
+        });
+        let onmouseup = link.batch_callback(move |evt: MouseEvent| {
+            offset_to_coord((evt.offset_x(), evt.offset_y())).and_then(|(row, col)| {
+                match evt.button() {
+                    0 => Some(Self::Message::LeftClick(row, col)),
+                    2 => Some(Self::Message::RightClick(row, col)),
+                    _ => None,
+                }
+            })
         });
         let oncontextmenu = link.batch_callback(move |evt: MouseEvent| {
             evt.prevent_default();
-            let row = (evt.offset_y() / cell_width_px as i32) - n_hints as i32;
-            let col = (evt.offset_x() / cell_width_px as i32) - n_hints as i32;
-            if row >= 0 && col >= 0 {
-                Some(Self::Message::LeftClick(row, col))
-            } else {
-                None
-            }
+            offset_to_coord((evt.offset_x(), evt.offset_y()))
+                .and_then(|(row, col)| Some(Self::Message::DragStart(row, col)))
         });
 
         let preview_field = match ctx.props().mode {
@@ -137,7 +179,7 @@ impl Component for Board {
                 <svg id={"game-board"}
                      width={target_width_px.to_string()}
                      height={target_width_px.to_string()}
-                     {onclick} {oncontextmenu}>
+                     {onmousedown} {onmouseup} {oncontextmenu}>
                     <NonogramPreview field={preview_field.clone()}
                                      width_px={preview_width_px as u32}
                                      margin_px={preview_margin_px as u32}/>
