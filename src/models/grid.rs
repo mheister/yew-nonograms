@@ -69,7 +69,7 @@ impl<T: Default + Clone + Copy + Into<u8> + From<u8>> Grid<T> {
             (height / 0x100) as u8,
         ];
         // 4 bytes of data seem to always be padded up to 8, pre-fill with '=' nonetheless
-        let mut dimensions_encoded = ['=' as u8; 8];
+        let mut dimensions_encoded = [b'='; 8];
         base64::encode_config_slice(
             dimensions_data,
             base64::URL_SAFE,

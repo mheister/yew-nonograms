@@ -139,7 +139,7 @@ impl Board {
 
     pub fn from_serialized_solution(serialized_solution: &str) -> Self {
         let solution = Grid::<FieldCell>::from_base64(serialized_solution)
-            .unwrap_or(Grid::new(10, 10));
+            .unwrap_or_else(|_| Grid::new(10, 10));
         let (width, height) = (solution.width(), solution.height());
         let col_hint_len = (width + 1) / 2;
         let row_hint_len = (height + 1) / 2;

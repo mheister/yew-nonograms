@@ -129,8 +129,8 @@ impl Component for Board {
             let col = (offset_x / cell_width_px as i32) - n_hints as i32;
             if row >= 0
                 && col >= 0
-                && row as usize <= n_field_rows - 1
-                && col as usize <= n_field_rows - 1
+                && (row as usize) < n_field_rows
+                && (col as usize) < n_field_rows
             {
                 Some((row, col))
             } else {
