@@ -208,7 +208,6 @@ impl Component for Board {
                     {grid_svg}{hints_svg}{cells_svg}{drag_sel_svg}
                 </svg>
                 {links_to_puzzle}
-                <p>{format!("s: {:?}", self.drag)}</p>
             </>
         }
     }
