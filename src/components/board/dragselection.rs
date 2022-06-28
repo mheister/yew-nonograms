@@ -9,19 +9,17 @@ pub struct DragSelection {
 /// between start and end, or the first dimension if they are equal.
 impl DragSelection {
     pub fn new(start: (i32, i32), end: (i32, i32)) -> Self {
-        let horz_diff = (end.0 - start.0).abs();
-        let vert_diff = (end.1 - start.1).abs();
-        let step = match (horz_diff - vert_diff).signum() {
-            1 => {
-                let horz_dir = (end.0 - start.0).signum();
-                (horz_dir, 0)
-            }
-            -1 => {
-                let vert_dir = (end.1 - start.1).signum();
-                (0, vert_dir)
-            }
-            _ => (1, 1),
+        let horz_diff = end.0 - start.0;
+        let vert_diff = end.1 - start.1;
+        let mut step = match (horz_diff.abs() - vert_diff.abs()).signum() {
+            1 => (horz_diff.signum(), 0),
+            -1 => (0, vert_diff.signum()),
+            _ => (horz_diff.signum(), 0),
         };
+        if step == (0, 0) {
+            // Allow iterator to terminate on single cell selection
+            step = (1, 1);
+        }
         Self { start, end, step }
     }
 }
@@ -128,6 +126,20 @@ mod tests {
         assert_eq!(Some((3, 1)), sel.next());
         assert_eq!(Some((3, 2)), sel.next());
         assert_eq!(Some((3, 3)), sel.next());
+        assert_eq!(None, sel.next());
+    }
+
+    #[test]
+    fn should_walk_in_l_shape_beginning_along_column_if_distances_same_and_moving_upwards()
+    {
+        let mut sel = DragSelection::new((3, 3), (0, 0));
+        assert_eq!(Some((3, 3)), sel.next());
+        assert_eq!(Some((2, 3)), sel.next());
+        assert_eq!(Some((1, 3)), sel.next());
+        assert_eq!(Some((0, 3)), sel.next());
+        assert_eq!(Some((0, 2)), sel.next());
+        assert_eq!(Some((0, 1)), sel.next());
+        assert_eq!(Some((0, 0)), sel.next());
         assert_eq!(None, sel.next());
     }
 
