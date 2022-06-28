@@ -10,15 +10,27 @@ use itertools::iproduct;
 use yew::prelude::*;
 use yew_router::prelude::Link;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LeftRight {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Debug)]
+struct Drag {
+    start: (i32, i32),
+    end: (i32, i32),
+    button: LeftRight,
+}
+
 pub struct Board {
     board: BoardModel,
-    drag_start: Option<(i32, i32)>,
+    drag: Option<Drag>,
 }
 
 pub enum BoardMsg {
-    DragStart(i32, i32),
-    RightClick(i32, i32),
-    LeftClick(i32, i32),
+    Click(i32, i32, LeftRight),
+    Drag(i32, i32, LeftRight),
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -45,57 +57,54 @@ impl Component for Board {
                 &"" => BoardModel::new(),
                 puzzle => BoardModel::from_serialized_solution(puzzle),
             },
-            drag_start: None,
+            drag: None,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match (ctx.props().mode, msg) {
-            (BoardMode::Solve, BoardMsg::RightClick(row, col)) => {
-                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
+            (BoardMode::Solve, BoardMsg::Click(row, col, btn)) => {
+                let drag = self.drag.take().unwrap_or(Drag {
+                    start: (row, col),
+                    end: (row, col),
+                    button: btn,
+                });
+                let first_cell = self
+                    .board
+                    .field(drag.start.0 as usize, drag.start.1 as usize);
+                let mut action = |row, col| match (drag.button, first_cell) {
+                    (LeftRight::Left, _) => self.board.fill(row, col),
+                    (LeftRight::Right, FieldCell::Marked) => self.board.unmark(row, col),
+                    (LeftRight::Right, _) => self.board.mark(row, col),
+                };
+                DragSelection::new(drag.start, drag.end)
                     .map(|(row, col)| (row as usize, col as usize))
-                    .for_each(|(row, col)| {
-                        self.board.mark(row, col);
-                    });
-                true
+                    .filter(|&(row, col)| action(row, col))
+                    .count()
+                    > 0
             }
-            (BoardMode::Solve, BoardMsg::LeftClick(row, col)) => {
-                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
-                    .map(|(row, col)| (row as usize, col as usize))
-                    .for_each(|(row, col)| {
-                        self.board.fill(row, col);
-                    });
-                true
-            }
-            (BoardMode::Set, BoardMsg::RightClick(row, col)) => {
-                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
+            (BoardMode::Set, BoardMsg::Click(row, col, btn)) => {
+                let drag = self.drag.take().unwrap_or(Drag {
+                    start: (row, col),
+                    end: (row, col),
+                    button: btn,
+                });
+                DragSelection::new(drag.start, drag.end)
                     .map(|(row, col)| (row as usize, col as usize))
                     .filter(|&(row, col)| {
-                        if self.board.solution(row, col) == FieldCell::Filled {
-                            self.board.set(row, col, false);
-                            return true;
-                        }
-                        false
+                        self.board.set(row, col, drag.button == LeftRight::Left)
                     })
                     .count()
                     > 0
             }
-            (BoardMode::Set, BoardMsg::LeftClick(row, col)) => {
-                DragSelection::new(self.drag_start.unwrap_or((row, col)), (row, col))
-                    .map(|(row, col)| (row as usize, col as usize))
-                    .filter(|&(row, col)| {
-                        if self.board.solution(row, col) != FieldCell::Filled {
-                            self.board.set(row, col, true);
-                            return true;
-                        }
-                        false
-                    })
-                    .count()
-                    > 0
-            }
-            (_, BoardMsg::DragStart(row, col)) => {
-                self.drag_start = Some((row, col));
-                false
+            (_, BoardMsg::Drag(row, col, btn)) => {
+                let start = self.drag.clone().map(|sel| sel.start).unwrap_or((row, col));
+                self.drag = Some(Drag {
+                    start,
+                    end: (row, col),
+                    button: btn,
+                });
+                true
             }
         }
     }
@@ -129,23 +138,33 @@ impl Component for Board {
             }
         };
 
-        let onmousedown = link.batch_callback(move |evt: MouseEvent| {
-            offset_to_coord((evt.offset_x(), evt.offset_y()))
-                .and_then(|(row, col)| Some(Self::Message::DragStart(row, col)))
-        });
-        let onmouseup = link.batch_callback(move |evt: MouseEvent| {
+        let current_drag_end = self.drag.as_ref().map(|sel| sel.end);
+        let onmousemove = link.batch_callback(move |evt: MouseEvent| {
+            evt.prevent_default();
+            if evt.buttons() == 0 {
+                return None;
+            }
             offset_to_coord((evt.offset_x(), evt.offset_y())).and_then(|(row, col)| {
-                match evt.button() {
-                    0 => Some(Self::Message::LeftClick(row, col)),
-                    2 => Some(Self::Message::RightClick(row, col)),
+                if Some((row, col)) == current_drag_end {
+                    return None;
+                }
+                match evt.buttons() {
+                    1 => Some(Self::Message::Drag(row, col, LeftRight::Left)),
+                    2 => Some(Self::Message::Drag(row, col, LeftRight::Right)),
                     _ => None,
                 }
             })
         });
-        let oncontextmenu = link.batch_callback(move |evt: MouseEvent| {
-            evt.prevent_default();
-            offset_to_coord((evt.offset_x(), evt.offset_y()))
-                .and_then(|(row, col)| Some(Self::Message::DragStart(row, col)))
+        let onclick = onmousemove.clone();
+        let oncontextmenu = onmousemove.clone();
+        let onmouseup = link.batch_callback(move |evt: MouseEvent| {
+            offset_to_coord((evt.offset_x(), evt.offset_y())).and_then(|(row, col)| {
+                match evt.button() {
+                    0 => Some(Self::Message::Click(row, col, LeftRight::Left)),
+                    2 => Some(Self::Message::Click(row, col, LeftRight::Right)),
+                    _ => None,
+                }
+            })
         });
 
         let preview_field = match ctx.props().mode {
@@ -179,13 +198,14 @@ impl Component for Board {
                 <svg id={"game-board"}
                      width={target_width_px.to_string()}
                      height={target_width_px.to_string()}
-                     {onmousedown} {onmouseup} {oncontextmenu}>
+                     {onmousemove} {onmouseup} {onclick} {oncontextmenu}>
                     <NonogramPreview field={preview_field.clone()}
                                      width_px={preview_width_px as u32}
                                      margin_px={preview_margin_px as u32}/>
                     {grid_svg}{hints_svg}{cells_svg}
                 </svg>
                 {links_to_puzzle}
+                <p>{format!("s: {:?}", self.drag)}</p>
             </>
         }
     }

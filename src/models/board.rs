@@ -138,7 +138,8 @@ impl Board {
     }
 
     pub fn from_serialized_solution(serialized_solution: &str) -> Self {
-        let solution = Grid::<FieldCell>::from_base64(serialized_solution).unwrap_or(Grid::new(10, 10));
+        let solution = Grid::<FieldCell>::from_base64(serialized_solution)
+            .unwrap_or(Grid::new(10, 10));
         let (width, height) = (solution.width(), solution.height());
         let col_hint_len = (width + 1) / 2;
         let row_hint_len = (height + 1) / 2;
@@ -185,24 +186,52 @@ impl Board {
         &self.solution
     }
 
-    pub fn fill(&mut self, row: usize, col: usize) {
-        self.field[row][col] = FieldCell::Filled;
-    }
-
-    pub fn mark(&mut self, row: usize, col: usize) {
-        self.field[row][col] = match &mut self.field[row][col] {
-            FieldCell::Marked => FieldCell::Empty,
-            _ => FieldCell::Marked,
+    pub fn fill(&mut self, row: usize, col: usize) -> bool {
+        let cell = &mut self.field[row][col];
+        if *cell == FieldCell::Empty {
+            *cell = FieldCell::Filled;
+            return true;
         }
+        false
     }
 
-    /// Set a cell in the solution
-    pub fn set(&mut self, row: usize, col: usize, filled: bool) {
-        if filled {
-            self.solution[row][col] = FieldCell::Filled;
+    /// Mark a cell (as known empty),
+    /// return true iff the cell was not previously marked
+    pub fn mark(&mut self, row: usize, col: usize) -> bool {
+        let cell = &mut self.field[row][col];
+        if *cell != FieldCell::Marked {
+            *cell = FieldCell::Marked;
+            return true;
+        }
+        false
+    }
+
+    /// Remove mark from a cell (leaving it as empty),
+    /// return true iff the cell was previously marked,
+    /// no-op if the cell was filled or empty
+    pub fn unmark(&mut self, row: usize, col: usize) -> bool {
+        let cell = &mut self.field[row][col];
+        if *cell == FieldCell::Marked {
+            *cell = FieldCell::Empty;
+            return true;
+        }
+        false
+    }
+
+    /// Set a cell in the solution,
+    /// return true iff the solution was changed
+    pub fn set(&mut self, row: usize, col: usize, filled: bool) -> bool {
+        let cell = &mut self.solution[row][col];
+        let target_val = if filled {
+            FieldCell::Filled
         } else {
-            self.solution[row][col] = FieldCell::Empty;
+            FieldCell::Empty
+        };
+        if *cell != target_val {
+            *cell = target_val;
+            self.generate_hints();
+            return true;
         }
-        self.generate_hints();
+        false
     }
 }
