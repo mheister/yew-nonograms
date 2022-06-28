@@ -123,6 +123,9 @@ impl Component for Board {
         let grid_svg = grid_svg(n_hints, n_rows, cell_width_px);
         let hints_svg = hints_svg(&self.board, cell_width_px);
         let cells_svg = cells_svg(&self.board, ctx.props().mode, cell_width_px);
+        let drag_sel_svg = self.drag.as_ref().map_or(html!(), |drag| {
+            selection_svg(&self.board, drag, cell_width_px)
+        });
 
         let offset_to_coord = move |(offset_x, offset_y): (i32, i32)| {
             let row = (offset_y / cell_width_px as i32) - n_hints as i32;
@@ -202,7 +205,7 @@ impl Component for Board {
                     <NonogramPreview field={preview_field.clone()}
                                      width_px={preview_width_px as u32}
                                      margin_px={preview_margin_px as u32}/>
-                    {grid_svg}{hints_svg}{cells_svg}
+                    {grid_svg}{hints_svg}{cells_svg}{drag_sel_svg}
                 </svg>
                 {links_to_puzzle}
                 <p>{format!("s: {:?}", self.drag)}</p>
@@ -260,6 +263,36 @@ fn cells_svg(board: &BoardModel, mode: BoardMode, cell_width_px: usize) -> Html 
             })
             .collect(),
     }
+}
+
+fn selection_svg(board: &BoardModel, drag: &Drag, cell_width_px: usize) -> Html {
+    let n_hints = board.hint_len();
+    let selected_for_fill_svg = |xi: usize, yi: usize| {
+        let x = cell_width_px * (xi + n_hints) + 1;
+        let y = cell_width_px * (yi + n_hints) + 1;
+        let rect_width = cell_width_px - 2;
+        let (x, y, width) = (x.to_string(), y.to_string(), rect_width.to_string());
+        let height = width.clone();
+        let class = "game-cell-hint";
+        html! {
+            <rect {x} {y} {width} {height} {class}/>
+        }
+    };
+    let selected_for_mark_svg = |xi: usize, yi: usize| {
+        let x = cell_width_px * (xi + n_hints) + cell_width_px / 2 - 4;
+        let y = cell_width_px * (yi + n_hints) + cell_width_px / 2 + 6;
+        let (x, y) = (x.to_string(), y.to_string());
+        html! {
+            <text {x} {y} fill="grey">{"X"}</text>
+        }
+    };
+    DragSelection::new(drag.start, drag.end)
+        .map(|(row, col)| (col as usize, row as usize))
+        .map(|(xi, yi)| match drag.button {
+            LeftRight::Left => selected_for_fill_svg(xi, yi),
+            LeftRight::Right => selected_for_mark_svg(xi, yi),
+        })
+        .collect()
 }
 
 fn hints_svg(board: &BoardModel, cell_width_px: usize) -> Html {
