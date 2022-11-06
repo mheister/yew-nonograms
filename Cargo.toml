@@ -9,3 +9,13 @@ itertools = "0.10.5"
 web-sys = "0.3.57"
 yew-router = "0.16.0"
 base64 = "0.13.0"
+
+[profile.release]
+# reduce binary size
+panic = 'abort'
+# compile entire project in a single compilation unit
+codegen-units = 1
+# aggressive optimization for size
+opt-level = 'z'
+# link time optimization
+lto = true
