@@ -29,8 +29,8 @@ pub struct Board {
 }
 
 pub enum BoardMsg {
-    Click(i32, i32, LeftRight),
-    Drag(i32, i32, LeftRight),
+    CompleteDragSelection(i32, i32, LeftRight),
+    UpdateDragSelection(i32, i32, LeftRight),
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -62,49 +62,12 @@ impl Component for Board {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        match (ctx.props().mode, msg) {
-            (BoardMode::Solve, BoardMsg::Click(row, col, btn)) => {
-                let drag = self.drag.take().unwrap_or(Drag {
-                    start: (row, col),
-                    end: (row, col),
-                    button: btn,
-                });
-                let first_cell = self
-                    .board
-                    .field(drag.start.0 as usize, drag.start.1 as usize);
-                let mut action = |row, col| match (drag.button, first_cell) {
-                    (LeftRight::Left, _) => self.board.fill(row, col),
-                    (LeftRight::Right, FieldCell::Marked) => self.board.unmark(row, col),
-                    (LeftRight::Right, _) => self.board.mark(row, col),
-                };
-                DragSelection::new(drag.start, drag.end)
-                    .map(|(row, col)| (row as usize, col as usize))
-                    .filter(|&(row, col)| action(row, col))
-                    .count()
-                    > 0
+        match msg {
+            BoardMsg::UpdateDragSelection(row, col, btn) => {
+                self.update_drag_selection(row, col, btn)
             }
-            (BoardMode::Set, BoardMsg::Click(row, col, btn)) => {
-                let drag = self.drag.take().unwrap_or(Drag {
-                    start: (row, col),
-                    end: (row, col),
-                    button: btn,
-                });
-                DragSelection::new(drag.start, drag.end)
-                    .map(|(row, col)| (row as usize, col as usize))
-                    .filter(|&(row, col)| {
-                        self.board.set(row, col, drag.button == LeftRight::Left)
-                    })
-                    .count()
-                    > 0
-            }
-            (_, BoardMsg::Drag(row, col, btn)) => {
-                let start = self.drag.clone().map(|sel| sel.start).unwrap_or((row, col));
-                self.drag = Some(Drag {
-                    start,
-                    end: (row, col),
-                    button: btn,
-                });
-                true
+            BoardMsg::CompleteDragSelection(row, col, btn) => {
+                self.complete_drag_selection(ctx.props().mode, row, col, btn)
             }
         }
     }
@@ -152,8 +115,16 @@ impl Component for Board {
                     return None;
                 }
                 match evt.buttons() {
-                    1 => Some(Self::Message::Drag(row, col, LeftRight::Left)),
-                    2 => Some(Self::Message::Drag(row, col, LeftRight::Right)),
+                    1 => Some(Self::Message::UpdateDragSelection(
+                        row,
+                        col,
+                        LeftRight::Left,
+                    )),
+                    2 => Some(Self::Message::UpdateDragSelection(
+                        row,
+                        col,
+                        LeftRight::Right,
+                    )),
                     _ => None,
                 }
             })
@@ -163,8 +134,16 @@ impl Component for Board {
         let onmouseup = link.batch_callback(move |evt: MouseEvent| {
             offset_to_coord((evt.offset_x(), evt.offset_y())).and_then(|(row, col)| {
                 match evt.button() {
-                    0 => Some(Self::Message::Click(row, col, LeftRight::Left)),
-                    2 => Some(Self::Message::Click(row, col, LeftRight::Right)),
+                    0 => Some(Self::Message::CompleteDragSelection(
+                        row,
+                        col,
+                        LeftRight::Left,
+                    )),
+                    2 => Some(Self::Message::CompleteDragSelection(
+                        row,
+                        col,
+                        LeftRight::Right,
+                    )),
                     _ => None,
                 }
             })
@@ -214,6 +193,60 @@ impl Component for Board {
 
     fn changed(&mut self, _ctx: &Context<Self>) -> bool {
         true
+    }
+}
+
+impl Board {
+    // returns true if the selection changed
+    fn update_drag_selection(&mut self, row: i32, col: i32, btn: LeftRight) -> bool {
+        let start = self.drag.clone().map(|sel| sel.start).unwrap_or((row, col));
+        self.drag = Some(Drag {
+            start,
+            end: (row, col),
+            button: btn,
+        });
+        true
+    }
+
+    // returns true if any action was performed
+    fn complete_drag_selection(
+        &mut self,
+        mode: BoardMode,
+        row: i32,
+        col: i32,
+        btn: LeftRight,
+    ) -> bool {
+        let drag = self.drag.take().unwrap_or(Drag {
+            start: (row, col),
+            end: (row, col),
+            button: btn,
+        });
+        match mode {
+            BoardMode::Solve => {
+                let start_cell_state = self
+                    .board
+                    .field(drag.start.0 as usize, drag.start.1 as usize);
+                let mut action = |row, col| match (drag.button, start_cell_state) {
+                    (LeftRight::Left, _) => self.board.fill(row, col),
+                    (LeftRight::Right, FieldCell::Marked) => self.board.unmark(row, col),
+                    (LeftRight::Right, _) => self.board.mark(row, col),
+                };
+                DragSelection::new(drag.start, drag.end)
+                    .map(|(row, col)| (row as usize, col as usize))
+                    .filter(|&(row, col)| action(row, col))
+                    .count()
+                    > 0
+            }
+            BoardMode::Set => {
+                DragSelection::new(drag.start, drag.end)
+                    .map(|(row, col)| (row as usize, col as usize))
+                    .filter(|&(row, col)| {
+                        self.board.set(row, col, drag.button == LeftRight::Left)
+                    })
+                    .count()
+                    > 0
+            }
+        }
     }
 }
 
