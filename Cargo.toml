@@ -3,11 +3,9 @@ name = "yew-app"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 yew = "0.19.3"
-itertools = "0.10.3"
+itertools = "0.10.5"
 web-sys = "0.3.57"
 yew-router = "0.16.0"
 base64 = "0.13.0"
