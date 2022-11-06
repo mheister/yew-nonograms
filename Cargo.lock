@@ -517,17 +517,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "yew-app"
-version = "0.1.0"
-dependencies = [
- "base64",
- "itertools",
- "web-sys",
- "yew",
- "yew-router",
-]
-
-[[package]]
 name = "yew-macro"
 version = "0.19.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -539,6 +528,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "yew-nonograms"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "itertools",
+ "web-sys",
+ "yew",
+ "yew-router",
 ]
 
 [[package]]
