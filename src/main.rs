@@ -4,9 +4,42 @@ mod models;
 
 use crate::routes::Route;
 use crate::components::board::{Board as BoardComponent, BoardMode};
+use crate::models::board::Board as BoardModel;
 
 use yew::prelude::*;
 use yew_router::prelude::*;
+
+#[derive(Properties, PartialEq)]
+struct MainProps {
+    pub mode: BoardMode,
+    pub puzzle: String
+}
+
+#[function_component(MainComp)]
+fn main_component(props: &MainProps) -> Html {
+    let puzzle_width = use_state(|| 10);
+    let puzzle_width_clone = puzzle_width.clone();
+    let puzzle = use_state(|| props.puzzle.clone());
+    let onclick = {
+        let puzzle = puzzle.clone();
+        Callback::from(move |_| {
+            let new_width = *puzzle_width + 1;
+            puzzle_width.set(new_width);
+            log::info!("Increasing puzzle width to {new_width}");
+            let mut grid = BoardModel::from_serialized_solution(puzzle.as_ref());
+            grid.resize(*puzzle_width);
+            puzzle.set(grid.solution_ref().serialize_base64())})
+    };
+
+    html! {
+        <>
+            <div>{"Width: "}{puzzle_width_clone.to_string()}</div>
+            <button {onclick}>{"+"}</button>
+            // <p>{(*puzzle).clone()}</p>
+            <BoardComponent mode={props.mode} puzzle={puzzle.clone()}/>
+        </>
+    }
+}
 
 fn switch(route: &Route) -> Html {
     let (mode, puzzle) = match route {
@@ -23,7 +56,7 @@ fn switch(route: &Route) -> Html {
         <>
             <h1>{"Nonogram Game"}</h1>
             <div class={"content-box"}>
-                <BoardComponent mode={mode} puzzle={puzzle}/>
+                <MainComp mode={mode} puzzle={puzzle}/>
             </div>
         </>
     }
@@ -50,12 +83,9 @@ impl Component for NonogramGame {
             </BrowserRouter>
         }
     }
-
-    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
-        true
-    }
 }
 
 fn main() {
+    wasm_logger::init(wasm_logger::Config::default());
     yew::start_app::<NonogramGame>();
 }

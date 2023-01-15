@@ -137,6 +137,15 @@ impl Board {
         result
     }
 
+    pub fn resize(&mut self, new_width: usize) {
+        self.width = new_width;
+        self.field = self.field.resized(new_width, new_width);
+        self.solution = self.solution.resized(new_width, new_width);
+        let hint_len = (new_width + 1) / 2;
+        self.col_hints = Grid::new(new_width, hint_len);
+        self.row_hints = Grid::new(hint_len, new_width);
+    }
+
     pub fn from_serialized_solution(serialized_solution: &str) -> Self {
         let solution = Grid::<FieldCell>::from_base64(serialized_solution)
             .unwrap_or_else(|_| Grid::new(10, 10));

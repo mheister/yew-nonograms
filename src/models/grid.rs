@@ -21,6 +21,20 @@ impl<T> std::ops::IndexMut<usize> for Grid<T> {
     }
 }
 
+impl<T> Grid<T> {
+    pub fn width(&self) -> usize {
+        self.width
+    }
+    #[allow(unused)]
+    pub fn height(&self) -> usize {
+        if self.width == 0 {
+            0
+        } else {
+            self.cells.len() / self.width
+        }
+    }
+}
+
 impl<T: Default + Clone + Copy> Grid<T> {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
@@ -34,15 +48,19 @@ impl<T: Default + Clone + Copy> Grid<T> {
             cells: cells.into(),
         }
     }
-    pub fn width(&self) -> usize {
-        self.width
-    }
-    #[allow(unused)]
-    pub fn height(&self) -> usize {
-        if self.width == 0 {
-            0
-        } else {
-            self.cells.len() / self.width
+    pub fn resized(&self, new_width: usize, new_height: usize) -> Self {
+        let mut cells = vec![];
+        cells.reserve(new_width * new_height);
+        for row in self.cells.chunks(self.width).take(new_height) {
+            cells.extend(row.iter().take(new_width));
+            if row.len() < new_width {
+                cells.extend_from_slice(&[T::default()].repeat(new_width - row.len()));
+            }
+        }
+        cells.resize(new_height * new_width, T::default()); // Add new rows if needed
+        Self {
+            width: new_width,
+            cells,
         }
     }
 }
@@ -115,7 +133,8 @@ impl<T: Default + Clone + Copy + Into<u8> + From<u8>> Grid<T> {
         };
         let mut grid = Grid::new(width, height);
         if width > 0 && height > 0 {
-            content.iter()
+            content
+                .iter()
                 .cartesian_product([0, 2, 4, 6usize])
                 .map(|(src_byte, pos)| (src_byte >> pos) & 0b11)
                 .take(width * height) // last byte may have <4 cells
@@ -266,17 +285,22 @@ mod tests {
     fn example_grid_should_reproduce_after_serialization_and_deserialization() {
         let width = 1000;
         let height = width;
-        let cells = (0..width * height).map(|i| {
-            if i % 77 == 0 {
-                return 2;
-            }
-            if i % 3 == 0 || i % 7 == 0 || i % 11 == 0 {
-                1u8
-            } else {
-                0u8
-            }
-        }).collect_vec();
+        let cells = (0..width * height)
+            .map(|i| {
+                if i % 77 == 0 {
+                    return 2;
+                }
+                if i % 3 == 0 || i % 7 == 0 || i % 11 == 0 {
+                    1u8
+                } else {
+                    0u8
+                }
+            })
+            .collect_vec();
         let grid = Grid::<u8>::from_flat(width, &cells);
-        assert_eq!(grid, Grid::<u8>::from_base64(&grid.serialize_base64()).unwrap());
+        assert_eq!(
+            grid,
+            Grid::<u8>::from_base64(&grid.serialize_base64()).unwrap()
+        );
     }
 }

@@ -25,6 +25,7 @@ struct Drag {
 
 pub struct Board {
     board: BoardModel,
+    serialized: String,
     drag: Option<Drag>,
 }
 
@@ -44,7 +45,7 @@ impl yew::html::ImplicitClone for BoardMode {}
 #[derive(PartialEq, Properties)]
 pub struct BoardProps {
     pub mode: BoardMode,
-    pub puzzle: String,
+    pub puzzle: UseStateHandle<String>,
 }
 
 impl Component for Board {
@@ -57,19 +58,25 @@ impl Component for Board {
                 &"" => BoardModel::new(),
                 puzzle => BoardModel::from_serialized_solution(puzzle),
             },
+            serialized: (*ctx.props().puzzle).clone(),
             drag: None,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        match msg {
+        let rerender = match msg {
             BoardMsg::UpdateDragSelection(row, col, btn) => {
                 self.update_drag_selection(row, col, btn)
             }
             BoardMsg::CompleteDragSelection(row, col, btn) => {
                 self.complete_drag_selection(ctx.props().mode, row, col, btn)
             }
+        };
+        if rerender {
+            self.serialized = self.board.solution_ref().serialize_base64();
+            ctx.props().puzzle.set(self.serialized.clone());
         }
+        rerender
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -157,16 +164,15 @@ impl Component for Board {
         let links_to_puzzle = match ctx.props().mode {
             BoardMode::Solve => html!(),
             BoardMode::Set => {
-                let serialized_solution = self.board.solution_ref().serialize_base64();
                 html! {
                     <>
                     <p>
-                        <Link<Route> to={Route::Set{puzzle: serialized_solution.clone()}}>
+                        <Link<Route> to={Route::Set{puzzle: self.serialized.clone()}}>
                             {"Link (Continue Setting)"}
                         </Link<Route>>
                     </p>
                     <p>
-                        <Link<Route> to={Route::Solve{puzzle: serialized_solution}}>
+                        <Link<Route> to={Route::Solve{puzzle: self.serialized.clone()}}>
                             {"Link (Solve)"}
                         </Link<Route>>
                     </p>
@@ -192,6 +198,12 @@ impl Component for Board {
     }
 
     fn changed(&mut self, _ctx: &Context<Self>) -> bool {
+        let puzzle_from_prop = _ctx.props().puzzle.as_ref();
+        if *puzzle_from_prop == self.serialized {
+            return false;
+        }
+        self.board = BoardModel::from_serialized_solution(&puzzle_from_prop);
+        log::info!("Updating puzzle from code");
         true
     }
 }

@@ -9,6 +9,8 @@ itertools = "0.10.5"
 web-sys = "0.3.57"
 yew-router = "0.16.0"
 base64 = "0.13.0"
+wasm-logger = "0.2.0"
+log = "0.4.17"
 
 [profile.release]
 # reduce binary size
