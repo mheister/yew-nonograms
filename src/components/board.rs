@@ -161,26 +161,6 @@ impl Component for Board {
             BoardMode::Set => self.board.solution_ref(),
         };
 
-        let links_to_puzzle = match ctx.props().mode {
-            BoardMode::Solve => html!(),
-            BoardMode::Set => {
-                html! {
-                    <>
-                    <p>
-                        <Link<Route> to={Route::Set{puzzle: self.serialized.clone()}}>
-                            {"Link (Continue Setting)"}
-                        </Link<Route>>
-                    </p>
-                    <p>
-                        <Link<Route> to={Route::Solve{puzzle: self.serialized.clone()}}>
-                            {"Link (Solve)"}
-                        </Link<Route>>
-                    </p>
-                    </>
-                }
-            }
-        };
-
         html! {
             <>
                 <svg id={"game-board"}
@@ -192,7 +172,6 @@ impl Component for Board {
                                      margin_px={preview_margin_px as u32}/>
                     {grid_svg}{hints_svg}{cells_svg}{drag_sel_svg}
                 </svg>
-                {links_to_puzzle}
             </>
         }
     }

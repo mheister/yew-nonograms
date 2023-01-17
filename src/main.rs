@@ -1,10 +1,10 @@
-mod routes;
 mod components;
 mod models;
+mod routes;
 
-use crate::routes::Route;
 use crate::components::board::{Board as BoardComponent, BoardMode};
 use crate::models::board::Board as BoardModel;
+use crate::routes::Route;
 
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -12,31 +12,60 @@ use yew_router::prelude::*;
 #[derive(Properties, PartialEq)]
 struct MainProps {
     pub mode: BoardMode,
-    pub puzzle: String
+    pub puzzle: String,
 }
 
 #[function_component(MainComp)]
 fn main_component(props: &MainProps) -> Html {
     let puzzle_width = use_state(|| 10);
-    let puzzle_width_clone = puzzle_width.clone();
     let puzzle = use_state(|| props.puzzle.clone());
-    let onclick = {
-        let puzzle = puzzle.clone();
-        Callback::from(move |_| {
-            let new_width = *puzzle_width + 1;
-            puzzle_width.set(new_width);
-            log::info!("Increasing puzzle width to {new_width}");
-            let mut grid = BoardModel::from_serialized_solution(puzzle.as_ref());
-            grid.resize(*puzzle_width);
-            puzzle.set(grid.solution_ref().serialize_base64())})
-    };
 
     html! {
         <>
-            <div>{"Width: "}{puzzle_width_clone.to_string()}</div>
+            if props.mode == BoardMode::Set {
+                <SettingPanel puzzle={puzzle.clone()} puzzle_width={puzzle_width}/>
+            }
+            <BoardComponent mode={props.mode} puzzle={puzzle}/>
+        </>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct SettingPanelProps {
+    pub puzzle: UseStateHandle<String>,
+    pub puzzle_width: UseStateHandle<usize>,
+}
+
+#[function_component(SettingPanel)]
+fn setting_panel(props: &SettingPanelProps) -> Html {
+    let puzzle_state = props.puzzle.clone();
+    let puzzle_width_state = props.puzzle_width.clone();
+    let onclick = {
+        let puzzle = props.puzzle.clone();
+        Callback::from(move |_| {
+            let new_width = *puzzle_width_state + 1;
+            puzzle_width_state.set(new_width);
+            log::info!("Increasing puzzle width to {new_width}");
+            let mut grid = BoardModel::from_serialized_solution(puzzle.as_ref());
+            grid.resize(new_width);
+            puzzle_state.set(grid.solution_ref().serialize_base64())
+        })
+    };
+    html! {
+        <>
+            <div>{"Width: "}{props.puzzle_width.to_string()}</div>
             <button {onclick}>{"+"}</button>
-            // <p>{(*puzzle).clone()}</p>
-            <BoardComponent mode={props.mode} puzzle={puzzle.clone()}/>
+            // <p>{(*props.puzzle).clone()}</p>
+            <p>
+                <Link<Route> to={Route::Set{puzzle: (*props.puzzle).clone()}}>
+                    {"Link (Continue Setting)"}
+                </Link<Route>>
+            </p>
+            <p>
+                <Link<Route> to={Route::Solve{puzzle: (*props.puzzle).clone()}}>
+                    {"Link (Solve)"}
+                </Link<Route>>
+            </p>
         </>
     }
 }
@@ -62,26 +91,12 @@ fn switch(route: &Route) -> Html {
     }
 }
 
-struct NonogramGame {}
-
-impl Component for NonogramGame {
-    type Message = ();
-    type Properties = ();
-
-    fn create(_ctx: &Context<Self>) -> Self {
-        Self {}
-    }
-
-    fn update(&mut self, _ctx: &Context<Self>, _msg: Self::Message) -> bool {
-        true
-    }
-
-    fn view(&self, _ctx: &Context<Self>) -> Html {
-        html! {
-            <BrowserRouter>
-                <Switch<Route> render={Switch::render(switch)} />
-            </BrowserRouter>
-        }
+#[function_component(NonogramGame)]
+fn nonogram_game() -> Html {
+    html! {
+        <BrowserRouter>
+            <Switch<Route> render={Switch::render(switch)} />
+        </BrowserRouter>
     }
 }
 
