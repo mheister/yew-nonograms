@@ -8,6 +8,8 @@ use preview::NonogramPreview;
 use itertools::iproduct;
 use yew::prelude::*;
 
+use wasm_bindgen::JsValue;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LeftRight {
     Left,
@@ -75,6 +77,10 @@ impl Component for Board {
         if rerender {
             self.puzzle_code = self.board.solution_ref().serialize_base64();
             ctx.props().puzzle.set(self.puzzle_code.clone());
+            web_sys::window().and_then(|w| w.history().ok()).map(|h| {
+                h.replace_state_with_url(&JsValue::null(), "", Some(&self.puzzle_code))
+                    .unwrap()
+            });
         }
         rerender
     }
