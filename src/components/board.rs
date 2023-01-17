@@ -2,13 +2,11 @@ mod dragselection;
 mod preview;
 
 use crate::models::board::{Board as BoardModel, FieldCell};
-use crate::routes::Route;
 use dragselection::DragSelection;
 use preview::NonogramPreview;
 
 use itertools::iproduct;
 use yew::prelude::*;
-use yew_router::prelude::Link;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LeftRight {
@@ -25,7 +23,8 @@ struct Drag {
 
 pub struct Board {
     board: BoardModel,
-    serialized: String,
+    mode: BoardMode,
+    puzzle_code: String,
     drag: Option<Drag>,
 }
 
@@ -58,7 +57,8 @@ impl Component for Board {
                 &"" => BoardModel::new(),
                 puzzle => BoardModel::from_serialized_solution(puzzle),
             },
-            serialized: (*ctx.props().puzzle).clone(),
+            mode: ctx.props().mode,
+            puzzle_code: (*ctx.props().puzzle).clone(),
             drag: None,
         }
     }
@@ -69,12 +69,12 @@ impl Component for Board {
                 self.update_drag_selection(row, col, btn)
             }
             BoardMsg::CompleteDragSelection(row, col, btn) => {
-                self.complete_drag_selection(ctx.props().mode, row, col, btn)
+                self.complete_drag_selection(self.mode, row, col, btn)
             }
         };
         if rerender {
-            self.serialized = self.board.solution_ref().serialize_base64();
-            ctx.props().puzzle.set(self.serialized.clone());
+            self.puzzle_code = self.board.solution_ref().serialize_base64();
+            ctx.props().puzzle.set(self.puzzle_code.clone());
         }
         rerender
     }
@@ -92,7 +92,7 @@ impl Component for Board {
 
         let grid_svg = grid_svg(n_hints, n_rows, cell_width_px);
         let hints_svg = hints_svg(&self.board, cell_width_px);
-        let cells_svg = cells_svg(&self.board, ctx.props().mode, cell_width_px);
+        let cells_svg = cells_svg(&self.board, self.mode, cell_width_px);
         let drag_sel_svg = self.drag.as_ref().map_or(html!(), |drag| {
             selection_svg(&self.board, drag, cell_width_px)
         });
@@ -156,7 +156,7 @@ impl Component for Board {
             })
         });
 
-        let preview_field = match ctx.props().mode {
+        let preview_field = match self.mode {
             BoardMode::Solve => self.board.field_ref(),
             BoardMode::Set => self.board.solution_ref(),
         };
@@ -176,14 +176,19 @@ impl Component for Board {
         }
     }
 
-    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
-        let puzzle_from_prop = _ctx.props().puzzle.as_ref();
-        if *puzzle_from_prop == self.serialized {
-            return false;
+    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+        let mut rerender = false;
+        let puzzle_from_prop = ctx.props().puzzle.as_ref();
+        if *puzzle_from_prop != self.puzzle_code {
+            self.board = BoardModel::from_serialized_solution(&puzzle_from_prop);
+            log::info!("Updating puzzle from code");
+            rerender = true;
         }
-        self.board = BoardModel::from_serialized_solution(&puzzle_from_prop);
-        log::info!("Updating puzzle from code");
-        true
+        if ctx.props().mode != self.mode {
+            self.mode = ctx.props().mode;
+            rerender = true;
+        }
+        rerender
     }
 }
 
