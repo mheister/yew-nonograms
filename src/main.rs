@@ -30,7 +30,7 @@ fn main_component(props: &MainProps) -> Html {
     }
 }
 
-fn switch(route: &Route) -> Html {
+fn switch(route: Route) -> Html {
     let (mode, puzzle) = match route {
         Route::Home => {
             return html! {
@@ -53,12 +53,12 @@ fn switch(route: &Route) -> Html {
 fn nonogram_game() -> Html {
     html! {
         <BrowserRouter>
-            <Switch<Route> render={Switch::render(switch)} />
+            <Switch<Route> render={switch} />
         </BrowserRouter>
     }
 }
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
-    yew::start_app::<NonogramGame>();
+    yew::Renderer::<NonogramGame>::new().render();
 }

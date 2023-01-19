@@ -1,14 +1,16 @@
 mod dragselection;
 mod preview;
 
-use crate::models::board::{Board as BoardModel, FieldCell};
+use crate::{
+    models::board::{Board as BoardModel, FieldCell},
+    routes::Route,
+};
 use dragselection::DragSelection;
 use preview::NonogramPreview;
 
 use itertools::iproduct;
 use yew::prelude::*;
-
-use wasm_bindgen::JsValue;
+use yew_router::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LeftRight {
@@ -76,11 +78,16 @@ impl Component for Board {
         };
         if rerender {
             self.puzzle_code = self.board.solution_ref().serialize_base64();
-            ctx.props().puzzle.set(self.puzzle_code.clone());
-            web_sys::window().and_then(|w| w.history().ok()).map(|h| {
-                h.replace_state_with_url(&JsValue::null(), "", Some(&self.puzzle_code))
-                    .unwrap()
-            });
+            let navigator = ctx.link().navigator().unwrap();
+            let route = match self.mode {
+                BoardMode::Solve => Route::Solve {
+                    puzzle: self.puzzle_code.clone(),
+                },
+                BoardMode::Set => Route::Set {
+                    puzzle: self.puzzle_code.clone(),
+                },
+            };
+            navigator.replace(&route)
         }
         rerender
     }
@@ -182,7 +189,7 @@ impl Component for Board {
         }
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, ctx: &Context<Self>, _orig_props: &Self::Properties) -> bool {
         let mut rerender = false;
         let puzzle_from_prop = ctx.props().puzzle.as_ref();
         if *puzzle_from_prop != self.puzzle_code {

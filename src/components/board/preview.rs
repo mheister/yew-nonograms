@@ -50,7 +50,7 @@ impl Component for NonogramPreview {
         false
     }
 
-    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, _ctx: &Context<Self>, _props: &Self::Properties) -> bool {
         true
     }
 }
