@@ -48,7 +48,7 @@ impl yew::html::ImplicitClone for BoardMode {}
 #[derive(PartialEq, Properties)]
 pub struct BoardProps {
     pub mode: BoardMode,
-    pub puzzle: UseStateHandle<String>,
+    pub puzzle: UseStateHandle<AttrValue>,
 }
 
 impl Component for Board {
@@ -62,7 +62,7 @@ impl Component for Board {
                 puzzle => BoardModel::from_serialized_solution(puzzle),
             },
             mode: ctx.props().mode,
-            puzzle_code: (*ctx.props().puzzle).clone(),
+            puzzle_code: ctx.props().puzzle.to_string(),
             drag: None,
         }
     }
@@ -78,6 +78,7 @@ impl Component for Board {
         };
         if rerender {
             self.puzzle_code = self.board.solution_ref().serialize_base64();
+            ctx.props().puzzle.set(self.puzzle_code.clone().into());
             let navigator = ctx.link().navigator().unwrap();
             let route = match self.mode {
                 BoardMode::Solve => Route::Solve {

@@ -9,7 +9,7 @@ use yew_router::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct SettingPanelProps {
-    pub puzzle: UseStateHandle<String>,
+    pub puzzle: UseStateHandle<AttrValue>,
     pub puzzle_width: UseStateHandle<usize>,
 }
 
@@ -29,7 +29,7 @@ pub fn setting_panel(props: &SettingPanelProps) -> Html {
             log::info!("Increasing puzzle width to {new_width}");
             let mut grid = BoardModel::from_serialized_solution(puzzle.as_ref());
             grid.resize(new_width);
-            puzzle_state.set(grid.solution_ref().serialize_base64())
+            puzzle_state.set(grid.solution_ref().serialize_base64().into())
         })
     };
     html! {
@@ -50,12 +50,12 @@ pub fn setting_panel(props: &SettingPanelProps) -> Html {
                 </select>
             // <p>{(*props.puzzle).clone()}</p>
             <p>
-                <Link<Route> to={Route::Set{puzzle: (*props.puzzle).clone()}}>
+                <Link<Route> to={Route::Set{puzzle: props.puzzle.to_string()}}>
                     {"Link (Continue Setting)"}
                 </Link<Route>>
             </p>
             <p>
-                <Link<Route> to={Route::Solve{puzzle: (*props.puzzle).clone()}}>
+                <Link<Route> to={Route::Solve{puzzle: props.puzzle.to_string()}}>
                     {"Link (Solve)"}
                 </Link<Route>>
             </p>

@@ -18,7 +18,7 @@ struct MainProps {
 #[function_component(MainComp)]
 fn main_component(props: &MainProps) -> Html {
     let puzzle_width = use_state(|| 10);
-    let puzzle = use_state(|| props.puzzle.clone());
+    let puzzle = use_state(|| AttrValue::from(props.puzzle.clone()));
 
     html! {
         <div class={"content-box"}>
