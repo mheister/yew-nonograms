@@ -7,33 +7,46 @@
      a, a:visited, a:hover, a:active {
          color: inherit;
      }
-     h1 {
+     h1, h3 {
          text-align: center;
      }
      label {
-         flex-direction: row;
-         width: 100px;
+         display: inline-block;
+         width: 14em;
          line-height: 26px;
-         margin-bottom: 10px;
+         text-align: right;
      }
-     select {
+     select, input {
          flex: 0 0 4em;
          margin-left: 10px;
          background: transparent;
          border: none;
          border-bottom: 1px solid #6D6D6D;
      }
+     input
+     {
+         text-overflow: ellipsis;
+         white-space: nowrap;
+         overflow: hidden;
+         width:17em; /* some width */
+     }
+     button {
+         background: transparent;
+         border: 1px solid #6D6D6D;
+         padding-top: 2px;
+         padding-right: 4px;
+         padding-left: 4px;
+     }
      .content-box {
          display: block;
          margin: 10px 10% 10px 10%;
-         padding: 40px;
+         padding: 30px;
          border-radius: 10px;
          background-color: #E8ECFF;
      }
      .panel {
-         display: block;
-         margin: 5px 10% 50px 10%;
-         padding: 10px;
+         margin: 5px auto 30px auto;
+         padding: 14px;
          border-radius: 10px;
          background-color: #E0E2F4;
      }
