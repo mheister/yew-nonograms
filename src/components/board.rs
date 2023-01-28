@@ -344,20 +344,28 @@ fn hints_svg(board: &BoardModel, cell_width_px: usize) -> Html {
         .map(|(xi, yi)| (n_hints + xi, yi, board.col_hint(xi, yi).number));
     let row_hints = iproduct!(0..n_hints, 0..n_field_rows)
         .map(|(xi, yi)| (xi, n_hints + yi, board.row_hint(yi, xi).number));
+    let font_size = |val: &str| {
+        let px = if val.len() == 1 {
+            cell_width_px -1
+        } else {
+            cell_width_px * 6 / 10 - 1
+        };
+        format!("{px}px")
+    };
     col_hints
         .chain(row_hints)
         .filter(|(_, _, val)| *val != 0u8)
         .map(|(xi, yi, val)| {
             (
-                cell_width_px * xi + cell_width_px / 2 - 4,
-                cell_width_px * yi + cell_width_px / 2 + 6,
+                cell_width_px * xi + cell_width_px / 2 - 6,
+                cell_width_px * yi + cell_width_px - 2,
                 val,
             )
         })
         .map(|(x, y, val)| (x.to_string(), y.to_string(), val.to_string()))
         .map(|(x, y, val)| {
             html! {
-                <text {x} {y}>{val}</text>
+                <text {x} {y} font-size={font_size(&val)}>{val}</text>
             }
         })
         .collect::<Html>()
