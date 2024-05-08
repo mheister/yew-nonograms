@@ -31,10 +31,11 @@ fn main_component(props: &MainProps) -> Html {
 }
 
 fn switch(route: Route) -> Html {
+    const STARTER_PUZZLE: &str = "CgAKAA==ABAAQAAAAQAEAFRVQRQQVAFBFBBUVQEAAA";
     let (mode, puzzle) = match route {
         Route::Home => {
             return html! {
-                <Redirect<Route> to={Route::Set{puzzle: "".to_owned()}}/>
+                <Redirect<Route> to={Route::Set{puzzle: STARTER_PUZZLE.to_owned()}}/>
             }
         }
         Route::Solve { puzzle } => (BoardMode::Solve, puzzle.clone()),
